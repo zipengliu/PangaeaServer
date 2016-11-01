@@ -22,6 +22,10 @@ app.get('/instance/:id', function(req, res) {
             res.send(401, {error: 'data file not found'});
             return;
         }
+
+
+
+        
         console.log('File opened!');
         var d = JSON.parse(data);
         console.log(d.Plane.length);
@@ -33,6 +37,33 @@ app.get('/instance/:id', function(req, res) {
         }
         res.send(result);
     })
+
+});
+
+app.get('/dinv-output/:id', function(req, res) {
+        var execSync = require('child_process').execSync;
+        execSync('Dviz ./data/dinv-output'+req.params.id+'.json temp.json')
+        fs.readFile('temp.json', function(err, data) {
+            if (err) {
+                console.log(err);
+                res.send(401, {error: 'data file not found'});
+                return;
+            }
+            
+            console.log('File opened!');
+            var d = JSON.parse(data);
+            console.log(d.Plane.length);
+            var points = dim_reduction(d.Plane);
+            // dirty fix! the data contains one corrupted state
+            var result = {
+                points: points,
+                states: d.States.slice(0, -1).map(s => s.Points.map(p => p.Dump))
+            }
+            res.send(result);
+            execSync('rm temp.json')
+        })
+        
+
 
 });
 
