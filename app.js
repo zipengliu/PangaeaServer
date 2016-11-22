@@ -7,6 +7,9 @@ var cors = require('cors');
 
 var app = express();
 
+var d3Scale = require('d3-scale');
+var d3Array = require('d3-array');
+
 app.use(cors());
 app.use(logger('dev'));
 app.use('/data', express.static(path.join(__dirname, 'data')));
@@ -67,6 +70,48 @@ app.get('/dinv-output/:id', function(req, res) {
 
 });
 
+function distance(a, b) {
+    return Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+}
+
+// Rotate the coordinates around the centroid between starting point and ending point to achieve left-to-right viewing order of time curves
+function rotate(coords) {
+    var s = coords[0], e = coords[coords.length - 1];
+    var dist = distance(s, e);
+    var c = {x: (s.x + e.x) / 2, y: (s.y + e.y) / 2};
+    var sin = (s.y - e.y) / dist, cos = (e.x - s.x) / dist;
+
+    var res = [];
+    for (var i = 0; i < coords.length; i++) {
+        var x = coords[i].x - c.x, y = coords[i].y - c.y;
+        // res.push({x: sin * x + cos * y, y: -cos * x + sin * y});
+        res.push({x: cos * x - sin * y, y: sin * x + cos * y});
+    }
+    return res;
+}
+
+// Normalize the coordinates to (0, 1) by linear transformation
+// how much do you want to relax the extent of the coordinates so that they don't show up on the border of the dotplot
+function normalize(coords) {
+    var  relaxCoefficient = 0.1;
+    var  xArr = coords.map(x => x.x);
+    var  yArr = coords.map(x => x.y);
+    var  xExtent = d3Array.extent(xArr);
+    var  xDeviation = d3Array.deviation(xArr);
+    var  yExtent = d3Array.extent(yArr);
+    var  yDeviation = d3Array.deviation(yArr);
+    xExtent[0] -= relaxCoefficient * xDeviation;
+    xExtent[1] += relaxCoefficient * xDeviation;
+    yExtent[0] -= relaxCoefficient * yDeviation;
+    yExtent[1] += relaxCoefficient * yDeviation;
+    console.log('extents: ' + xExtent + ' ' + yExtent);
+
+    let xScale = d3Scale.scaleLinear().domain(xExtent);
+    let yScale = d3Scale.scaleLinear().domain(yExtent);
+
+    return coords.map(d => ({x: xScale(d.x), y: yScale(d.y)}));
+}
+
 function dim_reduction(d) {
     var opt = {}
     opt.epsilon = 10; // epsilon is learning rate (10 = default)
@@ -79,11 +124,12 @@ function dim_reduction(d) {
 
     console.log('Begin tSNE');
     for(var k = 0; k < 500; k++) {
-      tsne.step(); // every time you call this, solution gets better
-      }
+        tsne.step(); // every time you call this, solution gets better
+    }
+    console.log('Finish tSNE');
 
-      console.log('Finish tSNE');
-      return tsne.getSolution(); // Y is an array of 2-D points that you can plot
+    var  coords = tsne.getSolution().map(d => ({x: d[0], y: d[1]}));
+    return normalize(rotate(coords));
 }
 
 // catch 404 and forward to error handler
