@@ -4,8 +4,66 @@ var logger = require('morgan');
 var fs = require('fs');
 var tsnejs = require('./tsne');
 var cors = require('cors');
-
+var wsrpc = require('express-ws-rpc');
 var app = express();
+
+// add websocket support to express app 
+var wss = require('express-ws')(app).wss;
+
+// on websocket request to the root 
+app.ws('/', function(ws, req) {
+    // this function gets called on each connection 
+    
+    // extend ws to decode messages 
+    wsrpc(ws);
+    
+    // define method that can be called from the client 
+    ws.on('submit', function (file, result) {
+        //console.log(file);
+        try {
+            fs.writeFileSync("input.json", file, 'utf8')
+        } catch (err) {
+            console.log(err)
+            result(null,err)
+            return
+        }
+
+        var execSync = require('child_process').execSync;
+        try {
+            execSync('Dviz input.json output.json')
+        } catch (err) {
+            console.log("error running dviz")
+            result(null, err)
+            return
+        }
+        try {
+            var data = fs.readFileSync('output.json')
+        } catch (err) {
+            console.log(err)
+            result(null, err)
+            return
+        }
+        console.log("file read")
+
+            
+        console.log('File opened!');
+        var d = JSON.parse(data);
+        console.log(d.Plane.length);
+        var points = dim_reduction(d.Plane);
+        // dirty fix! the data contains one corrupted state
+        var res = {
+            points: points,
+            states: d.States.slice(0, -1).map(s => s.Points.map(p => p.Dump))
+        }
+        execSync('rm input.json')
+        execSync('rm output.json')
+        result(null, res);
+
+    });
+    
+});
+
+
 
 app.use(cors());
 app.use(logger('dev'));
@@ -39,6 +97,9 @@ app.get('/instance/:id', function(req, res) {
     })
 
 });
+
+
+
 
 app.get('/dinv-output/:id', function(req, res) {
         var execSync = require('child_process').execSync;
