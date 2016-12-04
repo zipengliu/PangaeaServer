@@ -80,15 +80,25 @@ app.get('/instance/:id', function(req, res) {
             res.send(401, {error: 'data file not found'});
             return;
         }
+        fs.readFile('./data/test.inv.json', function(err, invariantData) {
+            if (err) {
+                console.log(err);
+                res.send(401, {error: 'data file not found'});
+                return;
+            }
+            console.log('File opened!');
+            var d = JSON.parse(data);
+            var d2 = JSON.parse(invariantData);
+            var result = {
+                distances: d.Plane,
+                // dirty fix! the data contains one corrupted state
+                states: d.States.slice(0, -1),
+                invariants: d2
+            }
+            res.send(result);
 
-        console.log('File opened!');
-        var d = JSON.parse(data);
-        var result = {
-            distances: d.Plane,
-            // dirty fix! the data contains one corrupted state
-            states: d.States.slice(0, -1).map(s => s.Points.map(p => p.Dump))
-        }
-        res.send(result);
+        })
+
     })
 
 });
