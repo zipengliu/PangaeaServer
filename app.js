@@ -86,16 +86,38 @@ app.get('/instance/:id', function(req, res) {
                 res.send(401, {error: 'data file not found'});
                 return;
             }
-            console.log('File opened!');
-            var d = JSON.parse(data);
-            var d2 = JSON.parse(invariantData);
-            var result = {
-                distances: d.Plane,
-                // dirty fix! the data contains one corrupted state
-                states: d.States.slice(0, -1),
-                invariants: d2
-            }
-            res.send(result);
+            fs.readFile('./data/Shiviz.log', function(err, logData) {
+                if (err) {
+                    console.log(err);
+                    return;
+                }
+                console.log('File opened!');
+
+                //  Parse log data
+                var s = logData.indexOf('\n\n');
+                var logString = logData.slice(s + 1).toString();
+
+                var regex = /(\w+) (\{[^\n]*\})\n([^\n]*)/g
+                var logs = [];
+                for (var a = regex.exec(logString); a != null; a = regex.exec(logString)) {
+                    var host = a[1];
+                    var clock = JSON.parse(a[2]);
+                    var event = a[3];
+                    logs.push({host: host, clock: clock, event: event})
+                }
+                console.log(logs.length);
+
+                var d = JSON.parse(data);
+                var d2 = JSON.parse(invariantData);
+                var result = {
+                    distances: d.Plane,
+                    // dirty fix! the data contains one corrupted state
+                    states: d.States.slice(0, -1),
+                    invariants: d2,
+                    logs: logs
+                }
+                res.send(result);
+            });
 
         })
 
