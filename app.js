@@ -75,6 +75,7 @@ app.get('/', function (req, res) {
 
 app.get('/instance/:id', function(req, res) {
     fs.readFile('./data/instance' + req.params.id + '.json', function(err, data) {
+    //fs.readFile('./data/' + req.params.id + '.json', function(err, data) {
         if (err) {
             console.log(err);
             res.send(401, {error: 'data file not found'});
