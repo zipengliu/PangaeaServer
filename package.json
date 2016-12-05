@@ -13,6 +13,8 @@
     "d3-array": "^1.0.1",
     "d3-scale": "^1.0.3",
     "express": "^4.14.0",
+    "express-ws": "^2.0.0",
+    "express-ws-rpc": "0.0.3",
     "morgan": "^1.7.0"
   }
 }
