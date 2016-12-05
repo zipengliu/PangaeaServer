@@ -114,7 +114,8 @@ app.get('/instance/:id', function(req, res) {
                     // dirty fix! the data contains one corrupted state
                     states: d.States.slice(0, -1),
                     invariants: d2,
-                    logs: logs
+                    logs: logs,
+                    processes: ['Apple', 'Banana', 'Apricot']
                 }
                 res.send(result);
             });
